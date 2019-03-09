@@ -1,0 +1,15 @@
+{
+    "name": "yyw/micro-framework",
+    "description": "YYW PHP Framework",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.1.3",
+        "laravel/lumen-framework": "5.8.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "YMF\\": "src/MicroFramework/"
+        }
+    }
+}
