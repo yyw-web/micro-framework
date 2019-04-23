@@ -1,12 +1,13 @@
 <?php
 namespace YMF\Mappers;
 use Illuminate\Database\DatabaseManager;
+use YMF\Models\BaseModel;
 
 class BaseMapper
 {
     protected $_pdo;
     protected $_model_class;
-
+    protected $usr;
     /**
      * Create a new response.
      *
@@ -14,6 +15,8 @@ class BaseMapper
      */
     public function __construct(DatabaseManager $databaseManager)
     {
+        global $_USR;
+        $this->usr = $_USR;
         $this->_pdo = $databaseManager->connection('mysql')->getPdo();
     }
 
@@ -23,6 +26,7 @@ class BaseMapper
         return $stmt;
     }
 
+    // v
     protected function _insertSQL($dataModel, bool $isWork = false):string
     {
         $tbl = ($isWork)? $dataModel->getWork():$dataModel->getTable();
@@ -359,7 +363,8 @@ class BaseMapper
         return !($cnt === false);
     }
 
-    protected function _addObject(_BaseDataModel $obj, bool $isWork = false):int
+    // v
+    protected function _addObject(BaseModel $obj, bool $isWork = false):int
     {
         $sql = $this->_insertSQL($obj, $isWork);
         $stmt = $this->_pdo->prepare($sql);
@@ -373,7 +378,7 @@ class BaseMapper
         }
     }
 
-    protected function _modObject(_BaseDataModel $obj, bool $isWork = false):bool
+    protected function _modObject(BaseModel $obj, bool $isWork = false):bool
     {
         $sql = $this->_updateSQL($obj, false, $isWork);
         $stmt = $this->_pdo->prepare($sql);

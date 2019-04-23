@@ -202,7 +202,13 @@ class BaseModel
     // 例外は発生しない＆共通処理を抜き出しただけなので関数名もログに出さない
     public function setParam(\PDOStatement &$stmt)
     {
-        // なにもしない
+        $schema = static::$_schema;
+        if (static::$_auto !== '') {
+            unset($schema[static::$_auto]);
+        }
+        foreach ($schema as $key => $val) {
+            $stmt->bindValue(':' . $key, $this->_data[$key],  $val['type']);
+        }
     }
 
     // 例外は発生しない＆共通処理を抜き出しただけなので関数名もログに出さない
