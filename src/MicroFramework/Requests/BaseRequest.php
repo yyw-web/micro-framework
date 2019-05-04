@@ -13,14 +13,11 @@ class BaseRequest
 
     public function setDefault(array $param): array
     {
-        $value = [];
         foreach (static::$_default as $key => $val) {
-            if (is_null($param[$key]) || ($param[$key] === '')) { // 0はOK
-                $value[$key] = $val;
-            }else{
-                $value[$key] = $param[$key];
+            if (!isset($param[$key])) {
+                $param[$key] = $val;
             }
         }
-        return $value;
+        return $param;
     }
 }

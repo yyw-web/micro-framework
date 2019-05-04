@@ -62,6 +62,21 @@ class BaseMapper
         return "UPDATE {$tbl} SET {$clms} WHERE `{$pkey}` = {$pval};";
     }
 
+    // v
+    protected function _updateCustomSQL(BaseModel $dataModel, array $params, int $pk, bool $isWork = false):string
+    {
+        $tbl = ($isWork)? $dataModel->getWork():$dataModel->getTable();
+        $pkey =  $dataModel->getPkey();
+        $clms = '';
+        foreach ($params as $key => $val) {
+            $clms .= '`' . $key . '`=:' . $key . ',';
+        }
+
+        $usr_id = $this->usr['ID'];
+        $clms .= "`edit_id`={$usr_id},`edit_dt`=NOW()";
+        return "UPDATE {$tbl} SET {$clms} WHERE `{$pkey}` = {$pk};";
+    }
+
     protected function _bulkUpdateSQL($dataModel, bool $isAll = false):string
     {
         $tbl = $dataModel->getTable();
@@ -96,8 +111,6 @@ class BaseMapper
         $clms .= "`edit_id`={$usr_id},`edit_dt`=NOW()";
         return $clms;
     }
-
-
 
     // 簡易型のWHERE文作成
     protected function _whereParam(array $where): string
@@ -191,9 +204,15 @@ class BaseMapper
 
     // whereは文字列と配列で処理が違う
     protected function _getObjects(
-                             string $class_name, array $keys, array $where, string $limit = '', string $order= '', bool $isDec = false, bool $isWork = false)
+        string $class_path,
+        array $keys,
+        array $where,
+        string $limit = '',
+        string $order= '',
+        bool $isDec = false,
+        bool $isWork = false)
     {
-        $this->_model_class = __namespace__ . $class_name;// 使わなくても宣言
+        $this->_model_class = $class_path;// 使わなくても宣言
         if ($isWork) {
             $tbl = $this->_model_class::getWork();
         } else {
@@ -228,8 +247,10 @@ class BaseMapper
 
         if ($isDec) {
             $this->_decorate($stmt);
+            return ['cnt'=>$cnt[0], 'data'=>$stmt->fetchAll()];
+        } else {
+            return ['cnt'=>$cnt[0], 'data'=>$stmt->fetchAll(\PDO::FETCH_ASSOC)];
         }
-        return ['cnt'=>$cnt[0], 'data'=>$stmt->fetchAll()];
     }
 
     protected function _getLRObject(
@@ -297,6 +318,7 @@ class BaseMapper
         return ['cnt'=>$cnt[0], 'data'=>$stmt->fetchAll()];
     }
 
+    // v
     protected function _getCount(string $tbl, array $where):int
     {
         if (empty($where)) {
@@ -383,6 +405,16 @@ class BaseMapper
         $sql = $this->_updateSQL($obj, false, $isWork);
         $stmt = $this->_pdo->prepare($sql);
         $obj->setParam($stmt);
+        $rst = $stmt->execute();
+        $cnt = $stmt->rowCount();// 0行じゃないことを確認
+        return ($rst === true && $cnt === 1);
+    }
+
+    protected function _modCustomObject(BaseModel $obj, array $params, int $pk, bool $isWork = false): bool
+    {
+        $sql = $this->_updateCustomSQL($obj, $params, $pk, $isWork);
+        $stmt = $this->_pdo->prepare($sql);
+        $obj->setCustomParam($stmt, $params);
         $rst = $stmt->execute();
         $cnt = $stmt->rowCount();// 0行じゃないことを確認
         return ($rst === true && $cnt === 1);
@@ -525,6 +557,24 @@ class BaseMapper
         $rst_ins = $this->_pdo->exec($sql_ins);
         $rst_del = $this->_pdo->exec($sql_del);
         if (($rst_ins === 1) && ($rst_del === 1)) {
+            return $this->_pdo->commit();
+        } else {
+            $this->_pdo->rollBack();
+            return false;
+        }
+    }
+
+    // v
+    protected function _workToTempSQL(BaseModel $obj, int $pk): bool
+    {
+        $tbl = $obj->getTable();
+        $work = $obj->getWork();
+        $pkey =  $obj->getPkey();
+        $sql_ins = "INSERT INTO `{$tbl}` (SELECT * FROM `{$work}` WHERE `{$pkey}` = {$pk});";
+
+        $this->_pdo->beginTransaction();
+        $rst_ins = $this->_pdo->exec($sql_ins);
+        if ($rst_ins === 1) {
             return $this->_pdo->commit();
         } else {
             $this->_pdo->rollBack();

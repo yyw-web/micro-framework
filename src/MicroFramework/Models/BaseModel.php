@@ -58,6 +58,7 @@ class BaseModel
             $this->_data[$prop] = $val;
             return;
         }
+
         $value = filter_var($val, $schema['filter'], $schema['param']);
         if ($schema['filter'] === FILTER_VALIDATE_BOOLEAN) {
             if (is_null($value)) {
@@ -208,6 +209,15 @@ class BaseModel
         }
         foreach ($schema as $key => $val) {
             $stmt->bindValue(':' . $key, $this->_data[$key],  $val['type']);
+        }
+    }
+
+    // 例外は発生しない＆共通処理を抜き出しただけなので関数名もログに出さない
+    public function setCustomParam(\PDOStatement &$stmt, array $params)
+    {
+        $schema = static::$_schema;
+        foreach ($params as $key => $val) {
+            $stmt->bindValue(':' . $key, $val,  $schema[$key]['type']);
         }
     }
 
