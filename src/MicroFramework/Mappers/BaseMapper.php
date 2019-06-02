@@ -26,6 +26,21 @@ class BaseMapper
         return $stmt;
     }
 
+    public function beginTransaction()
+    {
+        $this->_pdo->beginTransaction();
+    }
+
+    public function endTransaction()
+    {
+        try {
+            $this->_pdo->commit();
+        } catch (\Exception $e) {
+            $this->_pdo->rollBack();
+            throw new \Exception($e);
+        }
+    }
+
     // v
     protected function _insertSQL($dataModel, bool $isWork = false):string
     {
@@ -315,7 +330,7 @@ class BaseMapper
             $cnt = $stmt_cnt->fetch(\PDO::FETCH_NUM);
             $stmt->execute();
         }
-        return ['cnt'=>$cnt[0], 'data'=>$stmt->fetchAll()];
+        return ['cnt'=>$cnt[0], 'data'=>$stmt->fetchAll(\PDO::FETCH_ASSOC)];
     }
 
     // v
@@ -572,13 +587,7 @@ class BaseMapper
         $pkey =  $obj->getPkey();
         $sql_ins = "INSERT INTO `{$tbl}` (SELECT * FROM `{$work}` WHERE `{$pkey}` = {$pk});";
 
-        $this->_pdo->beginTransaction();
         $rst_ins = $this->_pdo->exec($sql_ins);
-        if ($rst_ins === 1) {
-            return $this->_pdo->commit();
-        } else {
-            $this->_pdo->rollBack();
-            return false;
-        }
+        return ($rst_ins === 1);
     }
 }
