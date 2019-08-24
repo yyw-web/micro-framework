@@ -78,10 +78,13 @@ class BaseMapper
     }
 
     // v
-    protected function _updateCustomSQL(BaseModel $dataModel, array $params, int $pk, bool $isWork = false):string
+    protected function _updateCustomSQL(BaseModel $dataModel, array $params, int $pk = 0, bool $isWork = false):string
     {
         $tbl = ($isWork)? $dataModel->getWork():$dataModel->getTable();
         $pkey =  $dataModel->getPkey();
+        if ($pk === 0) {
+            $pk   =  $dataModel->getPVal();
+        }
         $clms = '';
         foreach ($params as $key => $val) {
             $clms .= '`' . $key . '`=:' . $key . ',';
@@ -185,9 +188,9 @@ class BaseMapper
 
     // 条件次第で複数HITする可能性があるが最初の1個しか返さない。
     // 基本的にPKEYで検索かける。
-    protected function _getObject(string $class_name, array $keys, array $where, bool $isWork = false)
+    protected function _getObject(string $class_path, array $keys, array $where, bool $isWork = false)
     {
-        $this->_model_class = __namespace__ . $class_name;// 使わなくても宣言
+        $this->_model_class = $class_path;// 使わなくても宣言
         if (empty($where)) {
             return false;
         }
@@ -415,11 +418,11 @@ class BaseMapper
         }
     }
 
-    protected function _modObject(BaseModel $obj, bool $isWork = false):bool
+    protected function _modObject(BaseModel $obj, bool $isWork = false): bool
     {
         $sql = $this->_updateSQL($obj, false, $isWork);
         $stmt = $this->_pdo->prepare($sql);
-        $obj->setParam($stmt);
+        $obj->setParam($stmt, false);
         $rst = $stmt->execute();
         $cnt = $stmt->rowCount();// 0行じゃないことを確認
         return ($rst === true && $cnt === 1);
@@ -427,6 +430,9 @@ class BaseMapper
 
     protected function _modCustomObject(BaseModel $obj, array $params, int $pk, bool $isWork = false): bool
     {
+        if ($pk === 0) {
+            $pk = $obj->getPVal();
+        }
         $sql = $this->_updateCustomSQL($obj, $params, $pk, $isWork);
         $stmt = $this->_pdo->prepare($sql);
         $obj->setCustomParam($stmt, $params);
@@ -436,9 +442,9 @@ class BaseMapper
     }
 
     // pkで削除する。論理削除
-    protected function _delObject(string $class_name, int $pk):bool
+    protected function _delObject(string $class_path, int $pk):bool
     {
-        $this->_model_class = __namespace__ . $class_name;
+        $this->_model_class = $class_path;// 使わなくても宣言
         $tbl = $this->_model_class::getTable();
         $pkey = $this->_model_class::getPKey();
         $usr_id = $this->usr['ID'];
@@ -457,9 +463,9 @@ class BaseMapper
     }
 
     // 条件で削除する。物理削除
-    protected function _delForceObjects(string $class_name, array $where, bool $isWork = false):bool
+    protected function _delForceObjects(string $class_path, array $where, bool $isWork = false):bool
     {
-        $this->_model_class = __namespace__ . $class_name;
+        $this->_model_class = $class_path;
         if (empty($where)) {
             return false;
         }
